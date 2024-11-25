@@ -9,6 +9,8 @@ from collections import Counter
 from Bio.SeqUtils import gc_fraction
 from bs4 import BeautifulSoup
 from collections import Counter
+from Bio.SeqUtils import molecular_weight, IsoelectricPoint
+
 st.title("**Dashboard Genético**")
 def buscar_proteinas(query):
     try:
@@ -21,6 +23,26 @@ def buscar_proteinas(query):
         return record["IdList"]
     except Exception as e:
         return f"Error al buscar en GenBank: {e}"
+
+def calcular_propiedades(sequence):
+    # Reemplazamos 'X' por 'A' para evitar problemas
+    sequence = sequence.replace("X", "A")
+
+    # Peso molecular de la proteína
+    mw = molecular_weight(sequence, seq_type='protein')
+
+    # Punto isoeléctrico de la proteína
+    try:
+        ip = IsoelectricPoint.IsoelectricPoint(sequence)
+        pI = ip.pi()  # Método correcto es pi() en lugar de isoelectric_point()
+    except ValueError as e:
+        st.error(f"Error de valor: {e}")
+        pI = None 
+    except Exception as e:
+        st.error(f"Error calculando el punto isoeléctrico: {e}")
+        pI = None 
+
+    return mw, pI
 st.title("Búsqueda en GenBank")
 nombre = st.text_input("Introduce el nombre cíentifico de la especie para hacer la búsqueda:", "")
 if nombre:
@@ -40,6 +62,11 @@ if nombre:
             st.write(f"*Longitud de la secuencia*: {len(sequence)} pares de bases")
             st.write("*Primeros 200 nucleótidos de la secuencia:*")
             st.write(sequence[:200])
+            # Propiedades biofísicas
+            st.subheader("Propiedades Biofísicas:")
+            mw, pI = calcular_propiedades(sequence)
+            st.write(f"**Peso Molecular**: {mw:.2f} Da")
+            st.write(f"**Punto Isoeléctrico (pI)**: {pI:.2f}" if pI is not None else "**Punto Isoeléctrico (pI)**: No calculable")
             #AQUÍ LA COMPOSICIÓN DE AMINOÁCIDOS#
             st.subheader("Composición de Aminoácidos:")
             aminoacidos = Counter(sequence)
